@@ -7,4 +7,6 @@ router.get("/", categoryController.getAllCategories);
 
 router.get("/random", categoryController.getRandomCategories);
 
+router.put("/:id", categoryController.updateCategory);
+
 module.exports = router;

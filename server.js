@@ -68,7 +68,8 @@ const ip =  "localhost";
 
 const port = process.env.PORT || 3000; 
 
-app.listen(port, ip, () => {
-  console.log(`Product server listening on ${ip}:${port}`);
-});
+// app.listen(port, ip, () => {
+//   console.log(`Product server listening on ${ip}:${port}`);
+// });
 
+app.listen(process.env.PORT || 6013, () => console.log(`Product Backend is running on ${process.env.PORT}!`))

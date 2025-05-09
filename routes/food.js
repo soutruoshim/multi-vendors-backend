@@ -1,20 +1,31 @@
-const router = require('express').Router();
-const foodController = require('../controllers/foodController');
-const {verifyVendor} = require('../middleware/verifyToken');
+const router = require("express").Router();
+const foodController = require("../controllers/foodController");
+const {verifyTokenAndAuthorization, verifyVendor}= require("../middlewares/verifyToken")
 
-router.post("/", foodController.addFood);
 
-router.get("/recommendation/:code", foodController.getRandomFood);
+// UPADATE category
+router.get('/restaurant-foods/:id', foodController.getFoodList)
+router.get('/promotional-foods', foodController.getAllPromotionalFoods)
+router.post("/", verifyVendor , foodController.addFood);
 
-router.get("/byCode/:code", foodController.getAllFoodsByCode);
+router.post("/tags/:id", foodController.addFoodTag);
+
+router.post("/type/:id", foodController.addFoodType);
 
 router.get("/:id", foodController.getFoodById);
+router.get("/search/:food", foodController.searchFoods);
 
-router.get("/restaurant-foods/:id", foodController.getFoodsByRestaurant);
+router.get("/categories/:category/:code", foodController.getFoodsByCategoryAndCode);
+router.get("/:category/:code", foodController.getRandomFoodsByCategoryAndCode);
 
-router.get("/search/:search", foodController.searchFoods);
+router.delete("/:id", foodController.deleteFoodById);
 
-router.get("/:category/:code", foodController.getFoodsByCategoryAndCode);
+router.patch("/:id", foodController.foodAvailability);
+
+router.get("/recommendation/:code", foodController.getRandomFoodsByCode);
 
 
-module.exports = router;
+
+
+
+module.exports = router

@@ -1,18 +1,24 @@
-const router = require('express').Router();
-const addressController = require('../controllers/addressController')
-const {verifyTokenAndAuthorization} = require('../middleware/verifyToken');
+const router = require("express").Router();
+const addressController = require("../controllers/addressController");
+const {verifyTokenAndAuthorization, verifyAdmin}= require("../middlewares/verifyToken")
 
-router.post("/",verifyTokenAndAuthorization, addressController.addAddress);
+// UPADATE USER
+router.post("/",verifyTokenAndAuthorization, addressController.createAddress);
 
-router.get("/default",verifyTokenAndAuthorization, addressController.getDefaultAddress);
-
-router.get("/all",verifyTokenAndAuthorization, addressController.getAddresses);
+// DELETE USER
 
 router.delete("/:id",verifyTokenAndAuthorization, addressController.deleteAddress);
 
+// GET USER
 
-router.patch("/default/:id",verifyTokenAndAuthorization, addressController.setAddressDefault);
+router.get("/default",verifyTokenAndAuthorization, addressController.getDefaultAddress);
+
+router.get("/all",verifyTokenAndAuthorization, addressController.getUserAddresses);
+
+router.put("/:id",verifyTokenAndAuthorization, addressController.updateAddress);
+
+router.patch("/default/:address",verifyTokenAndAuthorization, addressController.setDefaultAddress);
 
 
 
-module.exports = router;
+module.exports = router

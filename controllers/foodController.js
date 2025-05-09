@@ -1,36 +1,168 @@
-const Food = require('../models/Food');
+const Food = require("../models/Food")
+
 
 module.exports = {
     addFood: async (req, res) => {
-        const { title, foodTags, category, code, restaurant, description, time, price, additives, imageUrl } = req.body;
+        const { title, foodTags, category, foodType, code, isAvailable, restaurant, description,time, price, additives, imageUrl } = req.body;
 
-        if (!title || !foodTags || !category || !code || !restaurant || !description || !time || !price || !additives || !imageUrl) {
-            return res.status(400).json({ status: false, message: "You have a missing field" });
+        // Simple validation
+        if (!title || !foodTags || !category || !foodType || !code || !description || !price || !additives || !time || !imageUrl || !restaurant || !isAvailable) {
+            return res.status(400).json({ status: false, message: 'Missing required fields' });
         }
-
+        const newFood = new Food({
+            title: req.body.title,
+            foodTags: req.body.foodTags,
+            category: req.body.category,
+            foodType: req.body.foodType,
+            code: req.body.code,
+            isAvailable: req.body.isAvailable,
+            restaurant: req.body.restaurant,
+            description: req.body.description,
+            time: req.body.time,
+            price: req.body.price,
+            additives: req.body.additives,
+            imageUrl: req.body.imageUrl
+        });
+    
         try {
-            const newFood = new Food(req.body);
-
             await newFood.save();
-
-            res.status(201).json({ status: true, message: "Food has been successfully added" });
+            res.status(201).json({ status: true, message: 'Food item successfully created', data: newFood });
         } catch (error) {
             res.status(500).json({ status: false, message: error.message });
         }
     },
 
     getFoodById: async (req, res) => {
-        const id = req.params.id;
+        const foodId = req.params.id;
+    
         try {
-            const food = await Food.findById(id);
-
-            res.status(200).json(food);
+            // Fetch food by ID and select specific fields you want to return
+            const food = await Food.findById(foodId).select(
+                'title foodTags foodType code isAvailable restaurant rating ratingCount description price additives imageUrl category time, createdAt, updatedAt'
+            );
+    
+            // If food item is not found
+            if (!food) {
+                return res.status(404).json({ status: false, message: 'Food item not found' });
+            }
+            console.log(food);
+            // Send back the food item
+            res.status(200).json({
+                ...food._doc,
+                restaurant: food.restaurant.toString(),
+                category: food.category.toString(),
+                ratingCount:food.ratingCount.toString(),
+                rating:parseFloat(food.rating)
+              });
+              
+              
         } catch (error) {
-            res.status(500).json({ status: false, message: error.message });
+            // Send error response
+            res.status(500).json({ status: false, message: 'An error occurred while fetching the food item.' });
+        }
+    },
+    
+
+
+    getFoodList: async (req, res) => {
+        const restaurant = req.params.id;
+      
+        try {
+          const foods = await Food.find({ restaurant: restaurant }).sort({ createdAt: -1 }); // Sort by date in descending order (newest first)
+      
+          res.status(200).json(foods);
+        } catch (error) {
+          res.status(500).json({ status: false, message: error.message });
+        }
+      },
+
+
+    deleteFoodById: async (req, res) => {
+        const foodId = req.params.id;
+
+        try {
+            const food = await Food.findByIdAndDelete(foodId);
+
+            if (!food) {
+                return res.status(404).json({ status: false, message: 'Food item not found' });
+            }
+
+            res.status(200).json({ status: true, message: 'Food item successfully deleted' });
+        } catch (error) {
+            res.status(500).json(error);
         }
     },
 
-    getRandomFood: async (req, res) => {
+    foodAvailability: async (req, res) => {
+        const foodId = req.params.id;
+
+        try {
+            // Find the restaurant by its ID
+            const food = await Food.findById(foodId);
+
+            if (!restaurant) {
+                return res.status(404).json({ message: 'Food not found' });
+            }
+
+            // Toggle the isAvailable field
+            food.isAvailable = !food.isAvailable;
+
+            // Save the changes
+            await food.save();
+
+            res.status(200).json({ message: 'Availability toggled successfully' });
+        } catch (error) {
+            res.status(500).json(error);
+        }
+    },
+
+    updateFoodById: async (req, res) => {
+        const foodId = req.params.id;
+
+        try {
+            const updatedFood = await Food.findByIdAndUpdate(foodId, req.body, { new: true, runValidators: true });
+
+            if (!updatedFood) {
+                return res.status(404).json({ status: false, message: 'Food item not found' });
+            }
+
+            res.status(200).json({ status: true, message: 'Food item successfully updated' });
+        } catch (error) {
+            res.status(500).json(error);
+        }
+    },
+
+    addFoodTag: async (req, res) => {
+        const foodId = req.params.id;
+        const { tag } = req.body;  // Assuming the tag to be added is sent in the request body
+
+        if (!tag) {
+            return res.status(400).json({ status: false, message: 'Tag is required' });
+        }
+
+        try {
+            const food = await Food.findById(foodId);
+
+            if (!food) {
+                return res.status(404).json({ status: false, message: 'Food item not found' });
+            }
+
+            // Check if tag already exists
+            if (food.foodTags.includes(tag)) {
+                return res.status(400).json({ status: false, message: 'Tag already exists' });
+            }
+
+            food.foodTags.push(tag);
+            await food.save();
+
+            res.status(200).json({ status: true, message: 'Tag successfully added', data: food });
+        } catch (error) {
+            res.status(500).json(error);
+        }
+    },
+
+
+    getRandomFoodsByCode: async (req, res) => {
         try {
             let randomFoodList = [];
     
@@ -46,7 +178,7 @@ module.exports = {
             // If no code provided in params or no Foods match the provided code
             if (!randomFoodList.length) {
                 randomFoodList = await Food.aggregate([
-                    { $sample: { size: 3 } },
+                    { $sample: { size: 5 } },
                     { $project: {  __v: 0 } }
                 ]);
             }
@@ -62,99 +194,114 @@ module.exports = {
         }
     },
 
-    getAllFoodsByCode: async(req, res) =>{
-        const code = req.params.code;
+
+    addFoodType: async (req, res) => {
+        const foodId = req.params.id;
+        const { foodType } = req.body.foodType;  // Assuming the tag to be added is sent in the request body
+
 
         try {
-            const foodList = await Food.find({code: code});
+            const food = await Food.findById(foodId);
 
-            return res.status(200).json(foodList);
-        } catch (error) {
-            return res.status(500).json({status: false, message:error.message});
-        }
-    },
-    
-    //Restaurant Menu
-    getFoodsByRestaurant: async (req, res) => {
-        const id = req.params.id;
-
-        try {
-            const foods = await Food.find({ restaurant: id });
-
-            res.status(200).json(foods);
-        } catch (error) {
-            res.status(500).json({ status: false, message: error.message });
-        }
-    },
-
-    getFoodsByCategoryAndCode: async (req, res) => {
-        const { category, code } = req.params;
-        try {
-            const foods = await Food.aggregate([
-                { $match: { category: category, code: code, isAvailable: true } },
-                { $project: { __v: 0 } }
-            ]);
-
-            if (foods.length === 0) {
-                return res.status(200).json([]);
+            if (!food) {
+                return res.status(404).json({ status: false, message: 'Food item not found' });
             }
 
-            res.status(200).json(foods);
+            // Check if tag already exists
+            if (food.foodType.includes(foodType)) {
+                return res.status(400).json({ status: false, message: 'Type already exists' });
+            }
+
+            food.foodType.push(foodType);
+            await food.save();
+
+            res.status(200).json({ status: true, message: 'Type successfully added' });
         } catch (error) {
-            res.status(500).json({ status: false, message: error.message });
-        }
-    },
-
-
-    searchFoods: async (req, res) => {
-        const search = req.params.search;
-
-        try {
-            const results = await Food.aggregate([
-                {
-                    $search: {
-                        index: "foods",
-                        text: {
-                            query: search,
-                            path: {
-                                wildcard: "*"
-                            }
-                        }
-                    }
-                }
-            ])
-
-            res.status(200).json(results);
-        } catch (error) {
-            res.status(500).json({ status: false, message: error.message });
+            res.status(500).json(error);
         }
     },
 
     getRandomFoodsByCategoryAndCode: async (req, res) => {
-        const { category, code } = req.params;
+        const { category, code } = req.params;  // Assuming category, code, and value are sent as parameters
 
         try {
-            let foods;
-
-            foods = await Food.aggregate([
-                { $match: { category: category, code: code, isAvailable: true } },
-                { $sample: { size: 10 } },
-            ])
+            let foods = await Food.aggregate([
+                { $match: { category: category } },
+                { $sample: { size: 10 } }
+            ]);
 
             if (!foods || foods.length === 0) {
                 foods = await Food.aggregate([
-                    { $match: { code: code, isAvailable: true } },
-                    { $sample: { size: 10 } },
-                ])
-            } else if (!foods || foods.length === 0) {
+                    { $match: { code: code } },
+                    { $sample: { size: 10 } }
+                ]);
+            } else {
                 foods = await Food.aggregate([
-                    { $match: { isAvailable: true } },
-                    { $sample: { size: 10 } },
-                ])
+                    { $sample: { size: 10 } }
+                ]);
             }
+
             res.status(200).json(foods);
         } catch (error) {
-            res.status(500).json({ status: false, message: error.message })
+            res.status(500).json({ error: error.message, status: false });
         }
-    }
-};
+    },
+
+    getFoodsByCategoryAndCode: async (req, res) => {
+        const { category, code } = req.params;  // Assuming category, code, and value are sent as parameters
+        try {
+            const foods = await Food.aggregate([
+                { $match: { category: category } },
+            ]);
+
+            if(foods.length === 0){
+                return res.status(200).json([])
+            }
+
+            res.status(200).json(foods);
+        } catch (error) {
+            res.status(500).json({ error: error.message, status: false });
+        }
+    },
+
+    searchFoods: async (req, res) => {
+        const search = req.params.food
+        try {
+            const results = await Food.aggregate(
+                [
+                    {
+                        $search: {
+                            index: "foods",
+                            text: {
+                                query: search,
+                                path: {
+                                    wildcard: "*"
+                                }
+                            }
+                        }
+                    }
+                ]
+            )
+            res.status(200).json(results);
+        } catch (error) {
+            res.status(500).json({ error: error.message, status: false });
+        }
+    },
+    getAllPromotionalFoods: async (req, res) => {
+        try {
+            // Get all foods where promotion is true
+            const promotionalFoods = await Food.find({ promotion: true, verified:true }).select('-__v');
+            
+            // Respond with the results
+            if (promotionalFoods.length) {
+                res.status(200).json(promotionalFoods);
+            } else {
+                res.status(200).json(promotionalFoods);
+                //res.status(404).json({ status: false, message: 'No promotional foods found' });
+            }
+        } catch (error) {
+            res.status(500).json(error);
+        }
+    },    
+
+}

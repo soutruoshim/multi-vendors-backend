@@ -1,8 +1,9 @@
-const router = require('express').Router();
-const ratingController = require('../controllers/ratingController');
-const {verifyTokenAndAuthorization} = require('../middleware/verifyToken');
+const router = require("express").Router();
+const ratingController = require("../controllers/ratingController");
+const {verifyTokenAndAuthorization}= require("../middlewares/verifyToken")
 
+// UPADATE USER
 router.post("/",verifyTokenAndAuthorization, ratingController.addRating);
+router.get("/",verifyTokenAndAuthorization, ratingController.checkIfUserRatedRestaurant);
 
-router.get("/",verifyTokenAndAuthorization, ratingController.checkUserRating);
 module.exports = router;

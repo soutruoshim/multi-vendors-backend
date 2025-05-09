@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
-const AddressSchema = new mongoose.Schema({
-    userId: {type: String, required: true},
-    addressLine1: {type: String, required: true},
-    postalCode: {type: String, required: true},
-    default: {type: Boolean, default: false},
-    deliveryInstructions: {type: String, required: false},
-    latitude: {type: Number, required: false},
-    longitude: {type: Number, required: false},
+const addressSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    addressLine1: { type: String, required: true },
+    postalCode: { type: String, required: true },
+    default: { type: Boolean, default: false },
+    deliveryInstructions: String,
+    latitude: {type: Number, required: true},
+    longitude: {type: Number, required: true}
 });
 
-module.exports = mongoose.model('Address', AddressSchema);
+module.exports = mongoose.model('Address', addressSchema);

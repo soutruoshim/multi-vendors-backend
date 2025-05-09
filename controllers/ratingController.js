@@ -1,65 +1,76 @@
-const Rating = require("../models/Rating");
-const Restaurant = require("../models/Restaurant");
-const Food = require("../models/Food");
-
+const Rating = require('../models/Rating')
+const Restaurant = require('../models/Restaurant');
+const Food = require('../models/Food');
+const Driver = require('../models/Driver');
 module.exports = {
     addRating: async (req, res) => {
         const newRating = new Rating({
-            userId: req.body.userId,
+            userId: req.user.id,
             ratingType: req.body.ratingType,
             product: req.body.product,
             rating: req.body.rating
         });
-
+    
         try {
-            await newRating.save();
-
-            if (req.body.ratingType === "Restaurant") {
+             await newRating.save();
+    
+            if (req.body.ratingType === 'Restaurant') {
                 const restaurants = await Rating.aggregate([
-                    { $match: { ratingType: req.body.ratingType, product: req.body.product } },
-                    { $group: { _id: '$product' }, averateRating: { $avg: '$rating' } }
+                    { $match: { ratingType: 'Restaurant', product: req.body.product } },
+                    { $group: { _id: '$product', averageRating: { $avg: '$rating' } } }
                 ]);
-
+    
                 if (restaurants.length > 0) {
                     const averageRating = restaurants[0].averageRating;
                     await Restaurant.findByIdAndUpdate(req.body.product, { rating: averageRating }, { new: true });
                 }
-            } else if (req.body.ratingType === "Food") {
-                const foods = await Rating.aggregate([
-                    { $match: { ratingType: req.body.ratingType, product: req.body.product } },
-                    { $group: { _id: '$product' }, averateRating: { $avg: '$rating' } }
+            } else if (req.body.ratingType === 'Driver') {
+                const driver = await Rating.aggregate([
+                    { $match: { ratingType: 'Driver', product: req.body.product } },
+                    { $group: { _id: '$product', averageRating: { $avg: '$rating' } } }
                 ]);
-
-                if (foods.length > 0) {
-                    const averageRating = foods[0].averageRating;
+    
+                if (driver.length > 0) {
+                    const averageRating = driver[0].averageRating;
+                    await Driver.findByIdAndUpdate(req.body.product, { rating: averageRating }, { new: true });
+                }
+            } else if (req.body.ratingType === 'Food') {
+                const food = await Rating.aggregate([
+                    { $match: { ratingType: 'Food', product: req.body.product } },
+                    { $group: { _id: '$product', averageRating: { $avg: '$rating' } } }
+                ]);
+    
+                if (food.length > 0) {
+                    const averageRating = food[0].averageRating;
                     await Food.findByIdAndUpdate(req.body.product, { rating: averageRating }, { new: true });
                 }
             }
-
-            res.status(200).json({status: true, message: "Rating updated successfully"});  
+    
+            res.status(200).json({status: true, message: 'Rating added successfully'});
         } catch (error) {
             res.status(500).json({status: false, message: error.message});
         }
     },
 
-    checkUserRating: async(req, res) => {
+
+     checkIfUserRatedRestaurant: async (req, res) => {
         const ratingType = req.query.ratingType;
         const product = req.query.product;
 
         try {
-            const existingRating = await Rating.findOne({
+            const ratingExists = await Rating.findOne({
                 userId: req.user.id,
                 product: product,
                 ratingType: ratingType
             });
-
-            if(existingRating){
-                res.status(200).json({status: true, message: "You have aleady rated this restaurant"});
-            }else{
-                res.status(200).json({status: false, message: "User has not rated this restaurant"});
+    
+            if (ratingExists) {
+                return res.status(200).json({ status: true, message: "You have already rated this restaurant." });
+            } else {
+                return res.status(200).json({ status: false, message: "User has not rated this restaurant yet." });
             }
         } catch (error) {
-           res.status(500).json({status: false, message: error.message}); 
+            return res.status(500).json({ status: false, message: error.message });
         }
     }
-};
+}
